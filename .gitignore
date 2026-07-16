@@ -1,0 +1,7 @@
+# Vercel CLI upload cache — a local SHA map, not site content (and it would be
+# publicly fetchable if deployed).
+.uploaded_shas.json
+
+# Local editing backups of the hand-edited shell. Git history replaces these,
+# and a .bak served from a static host is just a stale public copy of the page.
+index.html.bak_*
