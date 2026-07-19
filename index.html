@@ -652,7 +652,7 @@
   <div class="wrap wide">
     <section class="sec" id="explore">
       <div class="kicker">Interactive</div>
-      <p class="sec-s">119 IBL test probes, three models, one dropdown. Switch between the 3D trajectories
+      <p class="sec-s">119 IBL test probes, five models, one dropdown. Switch between the 3D trajectories
         and the per-channel predicted-vs-actual scatter; pick a probe in the 3D view and the region map
         follows it. Everything below is live — rotate, zoom, hover.</p>
 
@@ -664,6 +664,8 @@
               <option value="lfp">LFP 75k · Path-B</option>
               <option value="probeseq">Probe-sequence decoder</option>
               <option value="manipft">Manipulator + full fine-tune</option>
+              <option value="pseq301">Probe-sequence 301K · global-scalar α=1</option>
+              <option value="pseq1m">Probe-sequence 1M · global-scalar α=1</option>
             </select>
           </div>
           <div class="viewseg" role="tablist" aria-label="View">
@@ -836,17 +838,23 @@
   //   pred-vs-actual — <button class="tab"> chips; showTab(name) without the btn arg highlights
   //                  nothing, so we .click() the chip.
   //
-  // probe-lines trace map (49 traces). 0 = brain mesh; 1,3,5 / 2,4,6 = identity lines (abs/centered);
-  // 7-15 folded 3D, 16-24 native-hemi 3D (same 9 slots: True, Manip, LFP, ProbeSeq, ManipFT, then the
-  // 3 pre-Kabsch clouds, then Manip entry/tip); 25-36 absolute panels, 37-48 centered panels
-  // (method-major over Manip, LFP, ProbeSeq, ManipFT x AP,DV,ML).
+  // probe-lines trace map (69 traces). 0 = brain mesh; 1,3,5 / 2,4,6 = identity lines (abs/centered);
+  // 7-19 folded 3D, 20-32 native-hemi 3D (True, Manip, five model lines, five pre-Kabsch
+  // clouds, Manip entry/tip); 33-50 absolute panels, 51-68 centered panels
+  // (method-major over Manip + five models x AP,DV,ML).
   var MODELS_UI = {
     lfp:      {pva:'lfp2vec_75k_neurips',   region:'neurips',  metric:'<b>1,645</b> µm · LFP 75k · Path-B',
-               f3d:[9,12],  n3d:[18,21], pabs:[28,29,30], pcen:[40,41,42], manip:false},
+               f3d:[9,14],  n3d:[22,27], pabs:[36,37,38], pcen:[54,55,56], manip:false},
     probeseq: {pva:'transformer_decoder',   region:'probeseq', metric:'<b>1,420</b> µm · probe-sequence decoder',
-               f3d:[10,13], n3d:[19,22], pabs:[31,32,33], pcen:[43,44,45], manip:false},
+               f3d:[10,15], n3d:[23,28], pabs:[39,40,41], pcen:[57,58,59], manip:false},
     manipft:  {pva:'manip_insertion_angle', region:'manipft',  metric:'<b>827</b> µm · manipulator + full-FT',
-               f3d:[11,14], n3d:[20,23], pabs:[34,35,36], pcen:[46,47,48], manip:true}
+               f3d:[11,16], n3d:[24,29], pabs:[42,43,44], pcen:[60,61,62], manip:true},
+    pseq301:  {pva:'transformer_decoder_301k_gscale', region:null,
+               metric:'<b>1,288 ± 31</b> µm · 301K global-scalar α=1 · n=8 (showing median seed 3)',
+               f3d:[12,17], n3d:[25,30], pabs:[45,46,47], pcen:[63,64,65], manip:false},
+    pseq1m:   {pva:'transformer_decoder_1M_gscale', region:null,
+               metric:'<b>1,239 ± 64</b> µm · 1M global-scalar α=1 · n=8 (showing median seed 4)',
+               f3d:[13,18], n3d:[26,31], pabs:[48,49,50], pcen:[66,67,68], manip:false}
   };
   var CUR_MODEL='lfp', LINES_APPLYING=false, LINES_HOOKED=false;
   var metric=document.getElementById('metric');
@@ -864,13 +872,13 @@
     var folded = gd.data[7] && gd.data[7].visible!==false;   // 7 = True (LH-folded)
     var absv   = gd.data[1] && gd.data[1].visible!==false;   // 1 = identity line, absolute view
     var keep={};
-    keep[folded?7:16]=1;                                       // ground truth, always
+    keep[folded?7:20]=1;                                       // ground truth, always
     (folded?m.f3d:m.n3d).forEach(function(i){keep[i]=1;});     // model line + its pre-Kabsch cloud
     (absv?m.pabs:m.pcen).forEach(function(i){keep[i]=1;});     // its AP/DV/ML panels
-    if(m.manip){ (folded?[8,15]:[17,24]).forEach(function(i){keep[i]=1;});
-                 (absv?[25,26,27]:[37,38,39]).forEach(function(i){keep[i]=1;}); }
+    if(m.manip){ (folded?[8,19]:[21,32]).forEach(function(i){keep[i]=1;});
+                 (absv?[33,34,35]:[51,52,53]).forEach(function(i){keep[i]=1;}); }
     var idx=[], vis=[];
-    for(var i=7;i<=48;i++){ idx.push(i); vis.push(!!keep[i]); }
+    for(var i=7;i<=68;i++){ idx.push(i); vis.push(!!keep[i]); }
     LINES_APPLYING=true;
     var clear=function(){ setTimeout(function(){ LINES_APPLYING=false; },0); };
     try{ h.w.Plotly.restyle(gd,{visible:vis},idx).then(clear,clear); }catch(e){ LINES_APPLYING=false; }
@@ -893,6 +901,13 @@
       var ms=d&&d.getElementById('model'), ps=d&&d.getElementById('probe');
       if(!ms||!ps) return;
       var want=MODELS_UI[CUR_MODEL].region;
+      var note=d.getElementById('__region_unavailable');
+      if(!note){ note=d.createElement('div'); note.id='__region_unavailable';
+        note.style.cssText='position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;text-align:center;padding:32px;background:rgba(8,10,14,.94);color:#d8dee9;font:600 15px/1.55 system-ui,sans-serif';
+        note.innerHTML='<span>Full-recording region maps have not been generated for this checkpoint.<br><small style="font-weight:400;color:#9aa4b2">The verified 3D and predicted-vs-actual results are available above.</small></span>';
+        d.body.appendChild(note); }
+      note.style.display=want?'none':'flex';
+      if(!want) return;
       if(ms.value===want) return;
       ms.value=want;                                   // handler is an onchange PROPERTY -> call load()
       if(ps.value && typeof w.load==='function') w.load(ps.value);
