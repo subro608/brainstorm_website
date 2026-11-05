@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LFPformer · Geometry-Aware Self-Supervised Electrophysiology Representation Learning</title>
+<meta name="description" content="LFPformer (NeurIPS 2026): self-supervised representation learning on raw local field potentials, read out as Allen CCF coordinates. Interactive 3D explorer of full-recording predictions versus ground truth for every IBL test probe.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lfpformer-nyu.vercel.app/">
+<meta property="og:title" content="LFPformer · NeurIPS 2026">
+<meta property="og:description" content="Geometry-Aware Self-Supervised Electrophysiology Representation Learning">
+<meta property="og:image" content="https://lfpformer-nyu.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LFPformer: predicted and true probe tracks in the Allen mouse brain">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LFPformer · NeurIPS 2026">
+<meta name="twitter:description" content="Geometry-Aware Self-Supervised Electrophysiology Representation Learning">
+<meta name="twitter:image" content="https://lfpformer-nyu.vercel.app/og.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%235b7cff'/><stop offset='1' stop-color='%239b6bff'/></linearGradient></defs><rect x='6.5' y='1' width='3' height='14' rx='1.5' fill='url(%23g)'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+
+<!-- ═════════════ HERO ═════════════ -->
+<section class="hero">
+  <div class="page-container">
+    <h1 class="publication-title"><span class="gradient-word">LFPformer</span></h1>
+    <div class="paper-title">Geometry-Aware Self-Supervised Electrophysiology Representation Learning</div>
+    <div class="venue-line">NeurIPS 2026</div>
+    <div class="authors">
+      <span>S. Dey</span><span>P.-J. Lu</span><span>V. S. Parupudi</span><span>M. Patel</span><span>M.-E. Conde Paredes</span>
+      <span>M. Vöröslakos</span><span>A. Maslarova</span><span>G. Buzsáki</span><span>S. Vyas</span><span>E. Varol</span>
+    </div>
+    <div class="link-row">
+      <span class="btn coming-soon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Paper</span>
+      <span class="btn coming-soon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>Code</span>
+      <span class="btn coming-soon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Models</span>
+      <a class="btn" href="#explorer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>3D explorer</a>
+      <a class="btn" href="#bibtex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg>BibTeX</a>
+    </div>
+    <p class="hero-subtitle">Self-supervised learning on raw LFP that places every Neuropixels channel in the Allen brain atlas.</p>
+  </div>
+</section>
+
+<!-- ═════════════ 3D EXPLORER (teaser) ═════════════ -->
+<section class="teaser" id="explorer">
+  <div class="page-container" style="max-width:1320px">
+    <div class="center"><div class="pill">3D explorer</div></div>
+    <div class="shell">
+      <div class="explorer">
+        <div class="viewer" id="viewer">
+          <div class="loading" id="viewer-loading">Loading the Allen brain and probe tracks…</div>
+          <div class="viewer-overlay" id="viewer-overlay"></div>
+          <div class="viewer-tools">
+            <button class="icon-btn" id="btn-rotate" title="Auto-rotate">Rotate</button>
+            <button class="icon-btn" id="btn-reset" title="Reset view">Reset view</button>
+          </div>
+          <div class="viewer-legend">
+            <span><i class="gt"></i>Ground truth</span>
+            <span><i id="legend-pred" style="background:#882255"></i><span id="legend-pred-label">Prediction</span></span>
+          </div>
+          <div class="tooltip" id="tooltip"></div>
+        </div>
+        <div class="side">
+          <div class="side-card">
+            <div class="side-kicker">Method</div>
+            <div class="chip-groups" id="side-chips"></div>
+          </div>
+          <div class="side-card">
+            <div class="side-kicker">Predicted track</div>
+            <div class="seg" id="seg-mode">
+              <button data-mode="kabsch" class="is-active">Kabsch-aligned</button>
+              <button data-mode="pooled">Pooled channels</button>
+            </div>
+            <div class="seg" id="seg-scope" style="margin-top:.45rem">
+              <button data-scope="all" class="is-active">All probes</button>
+              <button data-scope="one">One probe</button>
+              <button data-scope="cmp">Compare methods</button>
+            </div>
+          </div>
+          <div class="side-card probe-card" id="probe-card"></div>
+          <div class="side-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="side-kicker">Probes</div>
+            <input class="search" id="probe-search" placeholder="Search">
+            <div class="probe-list" id="probe-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="lead" style="margin:1rem auto 0;font-size:.95rem">IBL test probes, full recordings. Drag to rotate, click a track.</p>
+  </div>
+</section>
+
+<!-- ═════════════ HIGHLIGHTS ═════════════ -->
+<section class="section soft-section">
+  <div class="page-container">
+    <div class="center"><h2 class="title-2" style="margin-bottom:1.4rem">Highlights</h2></div>
+    <div class="highlights-shell">
+      <div class="highlights-grid">
+        <div class="highlight-card"><div class="highlight-topline">Localization</div><div class="highlight-title">~1 mm per probe</div>
+          <div class="highlight-text">LFP only: <strong>1012 µm</strong> vs 1484 (AnyNet), 1576 (ViT)</div></div>
+        <div class="highlight-card"><div class="highlight-topline">Fusion</div><div class="highlight-title">LFP + micromanipulator</div>
+          <div class="highlight-text"><strong>710 µm</strong> vs 790 µm for the micromanipulator alone</div></div>
+        <div class="highlight-card"><div class="highlight-topline">Pretraining</div><div class="highlight-title">Anatomy emerges</div>
+          <div class="highlight-text">Atlas coordinates appear in frozen embeddings</div></div>
+        <div class="highlight-card"><div class="highlight-topline">Scale</div><div class="highlight-title">257M LFP chunks</div>
+          <div class="highlight-text">95M and 318M encoders</div></div>
+        <div class="highlight-card"><div class="highlight-topline">Transfer</div><div class="highlight-title">Region decoding</div>
+          <div class="highlight-text">309 IBL regions: <strong>0.081</strong> vs 0.035 balanced acc.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ FULL RECORDINGS ═════════════ -->
+<section class="section" id="recordings">
+  <div class="page-container" style="max-width:1320px">
+    <div class="center">
+      <h2 class="title-2">Prediction vs ground truth</h2>
+      <p class="lead" id="rec-lead">One tile per test probe. Coloured line: truth · dots: pooled prediction · dark line: Kabsch-aligned.</p>
+    </div>
+    <div class="bench-shell">
+      <div class="chip-groups" id="rec-chips"></div>
+      <div class="bench-toolbar">
+        <span>Sort</span>
+        <div class="seg" id="seg-sort">
+          <button data-sort="err" class="is-active">Error</button>
+          <button data-sort="subject">Subject</button>
+          <button data-sort="lab">Lab</button>
+        </div>
+        <span style="margin-left:.6rem">Section</span>
+        <div class="seg" id="seg-proj">
+          <button data-proj="sag" class="is-active">Sagittal</button>
+          <button data-proj="cor">Coronal</button>
+        </div>
+      </div>
+      <div class="bench-stage">
+        <div class="card gallery" id="gallery"></div>
+        <div class="card detail" id="detail"></div>
+      </div>
+      <div class="summary-strip" id="summary-strip"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ CHRONIC (zero-shot recording player) ═════════════ -->
+<section class="section soft-section" id="chronic">
+  <div class="page-container" style="max-width:1320px">
+    <div class="center">
+      <h2 class="title-2">Chronic recording, zero-shot</h2>
+      <p class="lead">One mouse, Neuropixels 2.0, five days over 2.5 months. No histology.</p>
+    </div>
+    <div class="bench-shell">
+      <div class="chip-groups" id="chr-chips"></div>
+
+      <div class="chr-player" id="chr-full">
+        <div class="chr-head"><h3>Full session</h3>
+          <button class="btn chr-play">Play</button>
+          <div class="seg chr-speed"><button data-s="10">10×</button><button data-s="60" class="is-active">60×</button><button data-s="300">300×</button></div>
+          <span class="chr-clock"></span></div>
+        <div class="chr-stage">
+          <div class="viewer chr-viewer" id="chr-viewer"><div class="loading">Loading…</div></div>
+          <div class="card chr-side"><div class="side-kicker">Regions along the probe</div>
+            <div class="chr-probe-wrap"><span class="chr-end">surface</span><div class="chr-regions"></div><span class="chr-end">tip</span></div></div>
+        </div>
+        <canvas class="chr-tl chr-tl-full"></canvas>
+      </div>
+
+      <div class="chr-player" id="chr-mazep">
+        <div class="chr-head"><h3>Linear maze</h3>
+          <button class="btn chr-play">Play</button>
+          <div class="seg chr-speed"><button data-s="1">1×</button><button data-s="10" class="is-active">10×</button><button data-s="60">60×</button></div>
+          <span class="chr-clock"></span></div>
+        <div class="chr-stage chr-stage-maze">
+          <div class="card chr-maze-card"><div class="side-kicker">Mouse position</div><canvas class="chr-maze"></canvas></div>
+          <div class="card chr-side"><div class="side-kicker">Regions along the probe</div>
+            <div class="chr-probe-wrap"><span class="chr-end">surface</span><div class="chr-regions"></div><span class="chr-end">tip</span></div></div>
+        </div>
+        <canvas class="chr-tl chr-tl-maze"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ METHOD (flow) ═════════════ -->
+<section class="section" id="method">
+  <div class="page-container">
+    <div class="center">
+      <h2 class="title-2" style="margin-bottom:1.4rem">From LFP to atlas coordinates</h2>
+    </div>
+    <div class="flow-shell">
+      <div class="flow-top">
+        <div class="flow-main"><img id="flow-img" src="figures/supp11.webp" alt="LFPformer readouts"></div>
+        <div class="flow-thumbs" id="flow-thumbs"></div>
+      </div>
+      <div class="flow-copy">
+        <div class="flow-kicker" id="flow-kicker"></div>
+        <h3 class="flow-title" id="flow-title"></h3>
+        <p class="flow-description" id="flow-description"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ PERFORMANCE ═════════════ -->
+<section class="section soft-section" id="results">
+  <div class="page-container">
+    <div class="center">
+      <h2 class="title-2">Results</h2>
+      <p class="lead">From the paper (Fig. 3c, Fig. 4).</p>
+    </div>
+    <div class="perf-shell">
+      <div class="perf-grid">
+        <div class="perf-panel">
+          <div class="perf-panel-kicker">IBL 3D localization</div>
+          <div class="perf-panel-title">Per-probe 3D error ↓</div>
+          <div class="perf-metric">
+            <div class="perf-metric-name">LFP only</div>
+            <div class="perf-bars" id="perf-lfp"></div>
+          </div>
+          <div class="perf-metric">
+            <div class="perf-metric-name">With micromanipulator coordinates</div>
+            <div class="perf-bars" id="perf-manip"></div>
+          </div>
+          <div class="perf-highlight">−472 µm vs AnyNet · −565 µm vs ViT</div>
+        </div>
+        <div class="perf-panel">
+          <div class="perf-panel-kicker">Brain-region classification</div>
+          <div class="perf-panel-title">Balanced accuracy ↑</div>
+          <div class="perf-metric">
+            <div class="perf-metric-name">IBL · 309 leaf regions (chance 0.003)</div>
+            <div class="perf-bars" id="perf-ibl"></div>
+          </div>
+          <div class="perf-metric">
+            <div class="perf-metric-name">NeuroNexus · 5 regions (chance 0.20)</div>
+            <div class="perf-bars" id="perf-nn"></div>
+          </div>
+          <div class="perf-highlight">2.3× AnyNet on 309 IBL regions</div>
+        </div>
+        <div class="perf-panel">
+          <div class="perf-panel-kicker">Scale</div>
+          <div class="perf-panel-title">Data and models</div>
+          <div class="perf-stat-stack">
+            <div class="perf-stat"><div class="perf-stat-label">Pretraining data</div><div class="perf-stat-main">257M</div>
+              <div class="perf-stat-sub">3-s LFP chunks</div></div>
+            <div class="perf-stat"><div class="perf-stat-label">Encoders</div><div class="perf-stat-main">95M / 318M</div>
+              <div class="perf-stat-sub">base / large encoders</div></div>
+            <div class="perf-stat"><div class="perf-stat-label">Test set</div><div class="perf-stat-main">8.88M</div>
+              <div class="perf-stat-sub">test chunks · 119 probes</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ FIGURES ═════════════ -->
+<section class="section" id="figures">
+  <div class="page-container" style="max-width:1240px">
+    <div class="center">
+      <h2 class="title-2" style="margin-bottom:1.4rem">Figures</h2>
+    </div>
+    <div class="fig-shell">
+      <div class="chip-groups" id="fig-chips"></div>
+      <div class="fig-stage" id="fig-stage"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ BIBTEX ═════════════ -->
+<section class="section" id="bibtex">
+  <div class="page-container">
+    <div class="center"><h2 class="title-2" style="margin-bottom:1.2rem">BibTeX</h2></div>
+    <div class="figure-frame">
+      <button class="icon-btn copy-btn" id="copy-bib">Copy</button>
+<pre id="bib">@inproceedings{dey2026geometry,
+  title     = {Geometry-Aware Self-Supervised Electrophysiology Representation Learning},
+  author    = {Dey, S. and Lu, P.-J. and Parupudi, V. S. and Patel, M. and Conde Paredes, M.-E. and
+               V{\"o}r{\"o}slakos, M. and Maslarova, A. and Buzs{\'a}ki, G. and Vyas, S. and Varol, E.},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026}
+}</pre>
+    </div>
+    <div class="ack-text">
+      Data: <a href="https://www.internationalbrainlab.com/brain-wide-map">IBL Brain-Wide Map</a>,
+      <a href="https://portal.brain-map.org/explore/circuits/visual-coding-neuropixels">Allen Brain Observatory</a>; brain mesh from the Allen CCFv3.<br>
+      Page layout adapted from the <a href="https://visinf.github.io/MARCO/">MARCO project page</a>.
+    </div>
+  </div>
+</section>
+
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>
